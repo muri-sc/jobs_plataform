@@ -88,6 +88,7 @@ export default function RecruiterCandidatos() {
                 <th>Interesse</th>
                 <th>Enviada em</th>
                 <th>Status</th>
+                <th>Chat</th>
               </tr>
             </thead>
             <tbody>
@@ -111,6 +112,11 @@ export default function RecruiterCandidatos() {
                         </option>
                       ))}
                     </select>
+                  </td>
+                  <td>
+                    <Link className="btn btn--ghost btn--sm" to={`/mensagens/${c.id}`}>
+                      Conversar
+                    </Link>
                   </td>
                 </tr>
               ))}

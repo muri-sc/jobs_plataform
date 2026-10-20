@@ -30,7 +30,7 @@ export default function RecruiterVagas() {
     setLoading(true);
     setError('');
     try {
-      const data = await jobsApi.listJobs({ status });
+      const data = await jobsApi.listMyJobs({ status });
       setJobs(data);
     } catch (err) {
       setError(formatApiError(err));

@@ -31,6 +31,16 @@ export function formatSalary(min, max) {
   return `Até ${toBRL(max)}`;
 }
 
+export function formatDateTime(value) {
+  if (!value) return '';
+  return new Date(value).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function formatDate(value) {
   if (!value) return '—';
   return new Date(value).toLocaleDateString('pt-BR', {

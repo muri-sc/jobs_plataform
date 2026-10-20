@@ -10,9 +10,10 @@ CREATE TABLE users (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Vagas
+-- 2. Vagas (recruiter_id = dono da vaga; NULL em vagas antigas sem dono)
 CREATE TABLE jobs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    recruiter_id BIGINT,
     company VARCHAR(150) NOT NULL,
     title VARCHAR(150) NOT NULL,
     description TEXT NOT NULL,
@@ -23,6 +24,7 @@ CREATE TABLE jobs (
     salary_max NUMERIC(12, 2),
     status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_jobs_recruiter FOREIGN KEY (recruiter_id) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT chk_salary_range CHECK (
         salary_min IS NULL OR salary_max IS NULL OR salary_max >= salary_min
     )
@@ -41,8 +43,22 @@ CREATE TABLE applications (
     CONSTRAINT uq_user_job UNIQUE (user_id, job_id)
 );
 
--- 4. Índices
+-- 4. Mensagens do chat (cada candidatura é uma conversa entre dev e dono da vaga)
+CREATE TABLE messages (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    application_id BIGINT NOT NULL,
+    sender_id BIGINT NOT NULL,
+    body VARCHAR(2000) NOT NULL CHECK (length(trim(body)) > 0),
+    read_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_messages_application FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_messages_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 5. Índices
 CREATE INDEX idx_jobs_status ON jobs(status);
 CREATE INDEX idx_jobs_location ON jobs(location);
 CREATE INDEX idx_applications_job ON applications(job_id);
 CREATE INDEX idx_applications_user ON applications(user_id);
+CREATE INDEX idx_jobs_recruiter ON jobs(recruiter_id);
+CREATE INDEX idx_messages_application ON messages(application_id, id);

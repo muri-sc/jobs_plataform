@@ -55,6 +55,7 @@ export default function MinhasCandidaturas() {
                 <th>Empresa</th>
                 <th>Status</th>
                 <th>Data</th>
+                <th>Chat</th>
               </tr>
             </thead>
             <tbody>
@@ -70,6 +71,11 @@ export default function MinhasCandidaturas() {
                     </span>
                   </td>
                   <td>{formatDate(item.applied_at)}</td>
+                  <td>
+                    <Link className="btn btn--ghost btn--sm" to={`/mensagens/${item.id}`}>
+                      Conversar
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -5,8 +5,9 @@ import { auth } from '../middlewares/auth.js';
 
 const router = Router();
 
-// Públicas
+// Públicas (/mine vem antes de /:id)
 router.get('/', jobController.list);
+router.get('/mine', auth('recruiter'), jobController.listMine);
 router.get('/:id', jobController.getOne);
 
 // Somente recruiter

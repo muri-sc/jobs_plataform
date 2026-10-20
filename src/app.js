@@ -1,6 +1,7 @@
 import express from 'express';
 import { errorHandler, notFound } from './middlewares/errorHandler.js';
-import { apiLimiter } from './middlewares/rateLimit.js';
+import { apiLimiter, chatLimiter } from './middlewares/rateLimit.js';
+import conversationRoutes from './routes/conversationRoutes.js';
 import routes from './routes/index.js';
 
 const app = express();
@@ -17,6 +18,8 @@ app.use((req, res, next) => {
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+// Conversas ficam antes de /api para não passarem pelo apiLimiter
+app.use('/api/conversations', chatLimiter, conversationRoutes);
 app.use('/api', apiLimiter, routes);
 
 app.use(notFound);

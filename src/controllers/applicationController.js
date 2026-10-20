@@ -1,5 +1,6 @@
 import * as applicationModel from '../models/applicationModel.js';
 import * as jobModel from '../models/jobModel.js';
+import { findOwnedJob } from './jobController.js';
 import { applicationStatusSchema, applySchema } from '../schemas/applicationSchema.js';
 import { idSchema } from '../schemas/commonSchema.js';
 import { AppError } from '../utils/AppError.js';
@@ -19,15 +20,15 @@ export async function listMine(req, res) {
 }
 
 export async function listByJob(req, res) {
-  const job = await jobModel.findById(idSchema.parse(req.params.id));
-  if (!job) throw new AppError('Vaga não encontrada', 404);
+  const job = await findOwnedJob(idSchema.parse(req.params.id), req.user);
   res.json(await applicationModel.findByJob(job.id));
 }
 
 export async function updateStatus(req, res) {
   const id = idSchema.parse(req.params.id);
   const { status } = applicationStatusSchema.parse(req.body);
-  const application = await applicationModel.updateStatus(id, status);
-  if (!application) throw new AppError('Candidatura não encontrada', 404);
-  res.json(application);
+  const current = await applicationModel.findById(id);
+  if (!current) throw new AppError('Candidatura não encontrada', 404);
+  await findOwnedJob(current.job_id, req.user);
+  res.json(await applicationModel.updateStatus(id, status));
 }

@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Login from './pages/Login';
+import Mensagens from './pages/Mensagens';
 import MinhasCandidaturas from './pages/MinhasCandidaturas';
 import Preferencias from './pages/Preferencias';
 import Register from './pages/Register';
@@ -37,6 +38,17 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        {['mensagens', 'mensagens/:applicationId'].map((path) => (
+          <Route
+            key={path}
+            path={path}
+            element={
+              <ProtectedRoute>
+                <Mensagens />
+              </ProtectedRoute>
+            }
+          />
+        ))}
         <Route
           path="recrutador/vagas"
           element={

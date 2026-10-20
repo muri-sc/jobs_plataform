@@ -8,6 +8,8 @@ API de vagas para devs iniciantes. Node (ES Modules), Express 5, PostgreSQL (`pg
 npm install
 cp .env.example .env        # ajuste DATABASE_URL e JWT_SECRET
 psql $DATABASE_URL -f database/schema.sql
+# banco criado antes do chat? aplique só a migration:
+# psql $DATABASE_URL -f database/migrations/001_chat.sql
 npm run dev                 # desenvolvimento (reinicia ao salvar)
 npm start                   # produção
 ```
@@ -41,6 +43,7 @@ src/
 - Rotas protegidas exigem o header `Authorization: Bearer <token>` (o token vem do login).
 - Papéis: `dev` (se candidata) e `recruiter` (gerencia vagas e candidaturas).
 - Sem token ou token inválido/expirado: **401**. Papel sem permissão: **403**.
+- Cada vaga tem um dono (`recruiter_id`, quem a criou). Editar, excluir, ver candidatos e mudar status de candidatura exigem ser o **dono** da vaga (senão **403**). Vagas antigas sem dono: `UPDATE jobs SET recruiter_id = <id> WHERE id = <vaga>;`
 
 | Método | Rota | Acesso |
 |---|---|---|
@@ -48,14 +51,19 @@ src/
 | POST | `/api/auth/login` | público |
 | GET | `/api/auth/me` | logado |
 | GET | `/api/jobs` | público |
+| GET | `/api/jobs/mine` | recruiter |
 | GET | `/api/jobs/:id` | público |
 | POST | `/api/jobs` | recruiter |
-| PATCH | `/api/jobs/:id` | recruiter |
-| DELETE | `/api/jobs/:id` | recruiter |
-| GET | `/api/jobs/:id/applications` | recruiter |
+| PATCH | `/api/jobs/:id` | dono da vaga |
+| DELETE | `/api/jobs/:id` | dono da vaga |
+| GET | `/api/jobs/:id/applications` | dono da vaga |
 | POST | `/api/applications` | dev |
 | GET | `/api/applications/me` | dev |
-| PATCH | `/api/applications/:id/status` | recruiter |
+| PATCH | `/api/applications/:id/status` | dono da vaga |
+| GET | `/api/conversations` | logado |
+| GET | `/api/conversations/unread` | logado |
+| GET | `/api/conversations/:applicationId/messages` | dev da candidatura ou dono da vaga |
+| POST | `/api/conversations/:applicationId/messages` | dev da candidatura ou dono da vaga |
 
 > **Atenção:** o driver `pg` devolve `BIGINT` e `NUMERIC` como **string**. Por isso `id`, `user_id`, `job_id`, `salary_min` e `salary_max` aparecem entre aspas nas respostas abaixo.
 
@@ -304,6 +312,78 @@ Valores: `submitted`, `reviewing`, `approved`, `rejected`.
 }
 ```
 Erros: **400**, **401**, **403**, **404** `{ "error": "Candidatura não encontrada" }`.
+
+---
+
+## Chat (recrutador ↔ dev)
+
+Cada candidatura é uma conversa entre o dev e o dono da vaga, identificada pelo `id` da candidatura. Só os dois participantes têm acesso. As rotas de conversa têm limite próprio de **1000 requisições / 15 min** (o frontend faz polling) e não consomem o limite geral da `/api`.
+
+Não é possível enviar mensagens (**409**) quando a candidatura foi recusada, a vaga está fechada ou a vaga ainda não tem dono. O histórico continua visível.
+
+### GET `/api/conversations`
+
+Conversas com pelo menos uma mensagem, da mais recente para a mais antiga.
+
+**200 OK**
+```json
+[
+  {
+    "application_id": "1",
+    "status": "submitted",
+    "job_id": "1",
+    "title": "Dev Júnior Node",
+    "company": "Acme",
+    "job_status": "open",
+    "other_name": "Maria Recrutadora",
+    "last_message": "Olá, tenho interesse!",
+    "last_sender_id": "2",
+    "last_message_at": "2026-10-20T14:00:00.000Z",
+    "unread": 1
+  }
+]
+```
+
+### GET `/api/conversations/unread`
+
+**200 OK** `{ "unread": 3 }`
+
+### GET `/api/conversations/:applicationId/messages?after=<id>`
+
+Retorna a conversa e as mensagens com `id` maior que `after` (opcional, para polling incremental). Marca como lidas as mensagens recebidas.
+
+**200 OK**
+```json
+{
+  "conversation": {
+    "application_id": "1",
+    "status": "submitted",
+    "dev_id": "2",
+    "dev_name": "Ana Dev",
+    "job_id": "1",
+    "title": "Dev Júnior Node",
+    "company": "Acme",
+    "job_status": "open",
+    "recruiter_id": "1",
+    "recruiter_name": "Maria Recrutadora",
+    "blocked_reason": null
+  },
+  "messages": [
+    { "id": "1", "sender_id": "2", "body": "Olá, tenho interesse!", "read_at": null, "created_at": "2026-10-20T14:00:00.000Z" }
+  ]
+}
+```
+`blocked_reason`: `null` (pode enviar) ou o motivo (`"Vaga fechada"`, `"Candidatura recusada"`, `"Recrutador ainda não atribuído a esta vaga"`).
+
+Erros: **401**, **403** (não participa da conversa), **404** `{ "error": "Conversa não encontrada" }`.
+
+### POST `/api/conversations/:applicationId/messages`
+
+Body (1 a 2000 caracteres):
+```json
+{ "body": "Olá, tenho interesse!" }
+```
+**201 Created** com a mensagem criada. Erros: **400**, **401**, **403**, **404**, **409** (envio bloqueado, ver `blocked_reason`).
 
 ---
 

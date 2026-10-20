@@ -8,6 +8,11 @@ export async function create(userId, jobId) {
   return rows[0];
 }
 
+export async function findById(id) {
+  const { rows } = await pool.query('SELECT * FROM applications WHERE id = $1', [id]);
+  return rows[0];
+}
+
 export async function findByUser(userId) {
   const { rows } = await pool.query(
     `SELECT a.id, a.status, a.applied_at, j.id AS job_id, j.title, j.company

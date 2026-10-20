@@ -1,7 +1,7 @@
 import { pool } from '../config/db.js';
 
 // Filtros opcionais: quando o valor é nulo, a condição é ignorada
-export async function findAll({ search, location, work_model, status }) {
+export async function findAll({ search, location, work_model, status, recruiter_id = null }) {
   const { rows } = await pool.query(
     `SELECT * FROM jobs
      WHERE status = $1
@@ -11,8 +11,9 @@ export async function findAll({ search, location, work_model, status }) {
             OR title ILIKE '%' || $4::text || '%'
             OR company ILIKE '%' || $4::text || '%'
             OR description ILIKE '%' || $4::text || '%')
+       AND ($5::bigint IS NULL OR recruiter_id = $5::bigint)
      ORDER BY created_at DESC`,
-    [status, location, work_model, search]
+    [status, location, work_model, search, recruiter_id]
   );
   return rows;
 }
@@ -22,11 +23,11 @@ export async function findById(id) {
   return rows[0];
 }
 
-export async function create(d) {
+export async function create(recruiterId, d) {
   const { rows } = await pool.query(
-    `INSERT INTO jobs (company, title, description, requirements, location, work_model, salary_min, salary_max)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [d.company, d.title, d.description, d.requirements, d.location, d.work_model, d.salary_min, d.salary_max]
+    `INSERT INTO jobs (recruiter_id, company, title, description, requirements, location, work_model, salary_min, salary_max)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+    [recruiterId, d.company, d.title, d.description, d.requirements, d.location, d.work_model, d.salary_min, d.salary_max]
   );
   return rows[0];
 }

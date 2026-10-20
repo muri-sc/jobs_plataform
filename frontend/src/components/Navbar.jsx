@@ -1,8 +1,33 @@
-import { Link, NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { getUnreadCount } from '../api/conversations';
 import { useAuth } from '../context/AuthContext';
+
+const UNREAD_POLL_MS = 30000;
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
+  const location = useLocation();
+  const [unread, setUnread] = useState(0);
+
+  // Atualiza ao trocar de página e a cada 30s
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnread(0);
+      return undefined;
+    }
+    async function load() {
+      try {
+        const data = await getUnreadCount();
+        setUnread(data.unread);
+      } catch {
+        // contador é secundário: ignora falhas
+      }
+    }
+    load();
+    const timer = setInterval(load, UNREAD_POLL_MS);
+    return () => clearInterval(timer);
+  }, [isAuthenticated, location.pathname]);
 
   return (
     <header className="site-header">
@@ -22,6 +47,16 @@ export default function Navbar() {
           )}
           {isAuthenticated && user?.role === 'recruiter' && (
             <NavLink to="/recrutador/vagas">Minhas vagas</NavLink>
+          )}
+          {isAuthenticated && (
+            <NavLink to="/mensagens">
+              Mensagens
+              {unread > 0 && (
+                <span className="badge" aria-label={`${unread} não lidas`}>
+                  {unread}
+                </span>
+              )}
+            </NavLink>
           )}
         </nav>
 

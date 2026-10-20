@@ -15,6 +15,11 @@ export function listJobs(filters = {}) {
   return request(`/jobs${toQuery(filters)}`);
 }
 
+/** Vagas do recrutador logado. */
+export function listMyJobs(filters = {}) {
+  return request(`/jobs/mine${toQuery(filters)}`);
+}
+
 export function getJob(id) {
   return request(`/jobs/${id}`);
 }
