@@ -3,15 +3,17 @@ import { useSearchParams } from 'react-router-dom';
 import * as jobsApi from '../api/jobs';
 import Alert from '../components/Alert';
 import JobCard from '../components/JobCard';
+import { useAuth } from '../context/AuthContext';
 import { formatApiError } from '../utils/errors';
 import { loadPreferences } from '../utils/preferences';
 
 export default function Vagas() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const prefs = loadPreferences();
 
   const [filters, setFilters] = useState({
-    search: searchParams.get('search') || prefs.preferred_role || '',
+    search: searchParams.get('search') || prefs.preferred_role || user?.preferred_role || '',
     location: searchParams.get('location') || prefs.location || '',
     work_model: searchParams.get('work_model') || prefs.work_model || '',
   });

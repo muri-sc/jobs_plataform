@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = resolveApiUrl();
 
 export class ApiError extends Error {
   constructor(message, { status, details } = {}) {
@@ -9,8 +9,24 @@ export class ApiError extends Error {
   }
 }
 
-function getToken() {
-  return localStorage.getItem('token');
+/** JWT da sessão atual. A API exige Authorization Bearer; não persistimos no navegador. */
+let authToken = null;
+let onUnauthorized = () => {};
+
+export function setAuthToken(token) {
+  authToken = token || null;
+}
+
+export function setUnauthorizedHandler(handler) {
+  onUnauthorized = typeof handler === 'function' ? handler : () => {};
+}
+
+function resolveApiUrl() {
+  const raw = (import.meta.env.VITE_API_URL || 'https://jobs-plataform.onrender.com').replace(
+    /\/$/,
+    ''
+  );
+  return raw.endsWith('/api') ? raw : `${raw}/api`;
 }
 
 /**
@@ -22,9 +38,8 @@ export async function request(path, options = {}) {
     ...(options.headers || {}),
   };
 
-  const token = getToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
   }
 
   const response = await fetch(`${API_URL}${path}`, {
@@ -50,13 +65,9 @@ export async function request(path, options = {}) {
     const isAuthRoute =
       path.startsWith('/auth/login') || path.startsWith('/auth/register');
 
-    // 401 em rota autenticada: limpa sessão e manda para login
     if (response.status === 401 && !isAuthRoute) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.assign('/login');
-      }
+      authToken = null;
+      onUnauthorized();
     }
 
     throw new ApiError(data?.error || 'Erro na requisição', {

@@ -1,61 +1,59 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import * as authApi from '../api/auth';
+import { setAuthToken, setUnauthorizedHandler } from '../api/client';
 
 const AuthContext = createContext(null);
 
-function readStoredUser() {
-  try {
-    const raw = localStorage.getItem('user');
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('token'));
-  const [user, setUser] = useState(readStoredUser);
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
 
-  function persistSession(nextToken, nextUser) {
-    localStorage.setItem('token', nextToken);
-    localStorage.setItem('user', JSON.stringify(nextUser));
-    setToken(nextToken);
-    setUser(nextUser);
-  }
-
-  function clearSession() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const clearSession = useCallback(() => {
+    setAuthToken(null);
     setToken(null);
     setUser(null);
-  }
+  }, []);
 
-  async function login(email, password) {
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      clearSession();
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login');
+      }
+    });
+  }, [clearSession]);
+
+  const login = useCallback(async (email, password) => {
     const data = await authApi.login({ email, password });
-    persistSession(data.token, data.user);
+    setAuthToken(data.token);
+    setToken(data.token);
+    setUser(data.user);
     return data.user;
-  }
+  }, []);
 
-  async function register(payload) {
-    await authApi.register(payload);
-    return login(payload.email, payload.password);
-  }
+  const register = useCallback(
+    async (payload) => {
+      await authApi.register(payload);
+      return login(payload.email, payload.password);
+    },
+    [login]
+  );
 
-  function logout() {
+  const logout = useCallback(() => {
     clearSession();
-  }
+  }, [clearSession]);
 
   const value = useMemo(
     () => ({
       token,
       user,
-      isAuthenticated: Boolean(token),
+      isAuthenticated: Boolean(token && user),
       login,
       register,
       logout,
       clearSession,
     }),
-    [token, user]
+    [token, user, login, register, logout, clearSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

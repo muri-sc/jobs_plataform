@@ -1,28 +1,21 @@
-const KEY = 'devstart_preferences';
-
 const DEFAULTS = {
   preferred_role: '',
   location: '',
   work_model: '',
 };
 
-/** Preferências de busca (localStorage). Não faz parte da sessão JWT. */
+/** Filtros da sessão atual. Cargo de interesse persistido fica em users.preferred_role. */
+let current = { ...DEFAULTS };
+
 export function loadPreferences() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...DEFAULTS };
-    return { ...DEFAULTS, ...JSON.parse(raw) };
-  } catch {
-    return { ...DEFAULTS };
-  }
+  return { ...current };
 }
 
 export function savePreferences(prefs) {
-  const next = {
+  current = {
     preferred_role: prefs.preferred_role?.trim() || '',
     location: prefs.location?.trim() || '',
     work_model: prefs.work_model || '',
   };
-  localStorage.setItem(KEY, JSON.stringify(next));
-  return next;
+  return { ...current };
 }

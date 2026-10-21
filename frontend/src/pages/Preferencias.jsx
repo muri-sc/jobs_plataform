@@ -41,7 +41,7 @@ export default function Preferencias() {
         <h1>Preferências de vaga</h1>
         <p className="muted">
           Defina o que você busca. Usamos isso para pré-preencher a busca de
-          vagas (salvo neste navegador).
+          vagas nesta sessão. O cargo informado no cadastro vem da sua conta.
         </p>
       </header>
 
